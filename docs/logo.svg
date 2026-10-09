@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#f5a623"/></radialGradient>
+  </defs>
+  <rect width="480" height="480" rx="96" fill="#0d1117"/>
+  <circle cx="240" cy="210" r="118" fill="url(#g)"/>
+  <!-- tab / receipt notch -->
+  <path d="M170 150 h140 v118 l-17.5 -14 -17.5 14 -17.5 -14 -17.5 14 -17.5 -14 -17.5 14 -17.5 -14 -17.5 14z" fill="#0d1117"/>
+  <path d="M195 182 h90 M195 208 h90 M195 234 h56" stroke="#f5c451" stroke-width="12" stroke-linecap="round"/>
+  <text x="240" y="405" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="58" font-weight="700" fill="#e6edf3">Lumen<tspan fill="#f5c451">Tab</tspan></text>
+</svg>

@@ -1,0 +1,10 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Lumenworks Extract",
+  "description": "Reference pay-per-call agent service for Lumen Tab: URL -> clean Markdown for AI agents, 0.002 USDC per call, paid with off-chain EIP-712 vouchers against a prepaid USDC tab on Arc (LumenTab 0xb4a0364c58B2DF53e25FfF0463B5434160Ed2B50).",
+  "services": [
+    { "name": "lumen-tab-v1", "endpoint": "eip155:5042:0xb4a0364c58B2DF53e25FfF0463B5434160Ed2B50" }
+  ],
+  "active": true,
+  "supportedTrust": ["reputation"]
+}

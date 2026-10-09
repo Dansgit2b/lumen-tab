@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lumen Tab — live on Arc</title>
+<link rel="icon" href="logo.png">
+<meta name="description" content="Prepaid USDC tabs for pay-per-call AI agent APIs on Arc. Live dashboard and voucher verifier.">
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--line:#30363d;--fg:#e6edf3;--mut:#8b949e;--acc:#f5c451;--ok:#3fb950;--warn:#d29922;--bad:#f85149}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  main{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
+  h1{margin:0;font-size:28px}h1 span{color:var(--acc)}h2{font-size:18px;margin:28px 0 10px}
+  .sub{color:var(--mut);margin:4px 0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .k{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.05em}.v{font-size:22px;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:500}code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}
+  .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid}
+  .open{color:var(--ok);border-color:var(--ok)}.closing{color:var(--warn);border-color:var(--warn)}.closed{color:var(--mut);border-color:var(--mut)}
+  .bar{height:6px;background:#21262d;border-radius:4px;overflow:hidden;margin-top:4px;min-width:90px}.bar i{display:block;height:100%;background:var(--acc)}
+  textarea,input{width:100%;background:#0d1117;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px;font-family:ui-monospace,monospace;font-size:12px}
+  button{background:var(--acc);color:#111;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;margin-top:8px}
+  .res{margin-top:10px;white-space:pre-wrap}.okc{color:var(--ok)}.badc{color:var(--bad)}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.flow .card b{color:var(--acc)}
+  footer{color:var(--mut);margin-top:40px;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Lumen <span>Tab</span></h1>
+  <p class="sub">Prepaid USDC tabs for pay-per-call AI agent APIs, live on Arc mainnet. Agents pay each call with a signed voucher (no gas, no wait); providers settle in USDC on Arc whenever they like.</p>
+
+  <div class="grid" id="stats">
+    <div class="card"><div class="k">Contract</div><div class="mono" id="addr"></div></div>
+    <div class="card"><div class="k">Tabs opened</div><div class="v" id="nTabs">…</div></div>
+    <div class="card"><div class="k">USDC escrowed now</div><div class="v" id="tvl">…</div></div>
+    <div class="card"><div class="k">USDC settled to providers</div><div class="v" id="settled">…</div></div>
+  </div>
+
+  <h2>How it works</h2>
+  <div class="flow">
+    <div class="card"><b>1. Open</b> — the agent deposits USDC into a tab for one provider (<code>open</code>), optionally tagging the provider's ERC-8004 agent id.</div>
+    <div class="card"><b>2. Call</b> — the API answers <code>402</code>; the agent signs an EIP-712 <code>Voucher(tabId, cumulative)</code> and retries. Zero gas, sub-ms verification.</div>
+    <div class="card"><b>3. Settle</b> — the provider redeems the latest voucher on Arc in one tx for many calls (<code>redeem</code> / <code>closeByProvider</code>).</div>
+    <div class="card"><b>4. Exit</b> — the payer can always leave: <code>requestClose</code> → close delay → <code>finalize</code> refunds the unspent balance.</div>
+  </div>
+
+  <h2>Tabs</h2>
+  <div class="card" style="overflow:auto"><table id="tabs"><thead><tr><th>#</th><th>Status</th><th>Payer</th><th>Provider</th><th>Spent / deposit</th><th>Close delay</th></tr></thead><tbody><tr><td colspan="6">loading from Arc…</td></tr></tbody></table></div>
+
+  <h2>Recent activity</h2>
+  <div class="card" style="overflow:auto"><table id="events"><thead><tr><th>Block</th><th>Event</th><th>Tab</th><th>Details</th><th>Tx</th></tr></thead><tbody></tbody></table></div>
+
+  <h2>Voucher verifier</h2>
+  <div class="card">
+    <p class="sub" style="margin-top:0">Paste an <code>x-lumen-tab</code> header. It is checked against live tab state, exactly as a provider would before serving a paid call (the contract's own <code>voucherDigest</code> is used, so this works for EOA signers).</p>
+    <textarea id="vin" rows="3" placeholder="eyJzIjoibHVtZW4tdGFiLXYxIiwidCI6..."></textarea>
+    <button id="vbtn">Verify</button> <button id="vex" style="background:#30363d;color:#e6edf3">Load a real voucher from tab #3</button>
+    <div class="res mono" id="vout"></div>
+  </div>
+
+  <footer>Lumen Tab by Lumenworks · MIT · Arc chain id 5042 · <a id="srcLink" href="#">contract on explorer</a> · reads directly from <code>rpc.mainnet.arc.io</code>, no backend.</footer>
+</main>
+<script type="module">
+import { createPublicClient, http, formatUnits, recoverAddress } from "https://esm.sh/viem@2.57.4";
+import { arc } from "https://esm.sh/viem@2.57.4/chains";
+import { lumenTabAbi } from "./abi.mjs";
+
+const C = "0xb4a0364c58B2DF53e25FfF0463B5434160Ed2B50";
+const USDC = "0x3600000000000000000000000000000000000000";
+const DEPLOY_BLOCK = 25046341n;
+const EXP = "https://explorer.arc.io";
+const pc = createPublicClient({ chain: arc, transport: http("https://rpc.mainnet.arc.io") });
+const $ = (id) => document.getElementById(id);
+const u = (x) => Number(formatUnits(BigInt(x), 6)).toLocaleString(undefined, { maximumFractionDigits: 6 });
+const short = (a) => `<a class="mono" href="${EXP}/address/${a}" target="_blank" rel="noopener">${a.slice(0, 6)}…${a.slice(-4)}</a>`;
+const dur = (s) => s >= 86400 ? `${s / 86400}d` : s >= 3600 ? `${s / 3600}h` : `${s / 60}m`;
+$("addr").innerHTML = short(C); $("srcLink").href = `${EXP}/address/${C}`;
+
+async function load() {
+  const next = await pc.readContract({ address: C, abi: lumenTabAbi, functionName: "nextTabId" });
+  const ids = Array.from({ length: Number(next) - 1 }, (_, i) => BigInt(i + 1)).reverse();
+  const tabs = await Promise.all(ids.map((id) => pc.readContract({ address: C, abi: lumenTabAbi, functionName: "getTab", args: [id] })));
+  const bal = await pc.readContract({ address: USDC, abi: [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] }], functionName: "balanceOf", args: [C] });
+  $("nTabs").textContent = ids.length; $("tvl").textContent = u(bal);
+  const now = Date.now() / 1000;
+  $("tabs").tBodies[0].innerHTML = tabs.map((t, i) => {
+    const st = t.closed ? "closed" : t.closeAt ? "closing" : "open";
+    const label = st === "closing" ? `closing ${t.closeAt > now ? "in " + Math.ceil((Number(t.closeAt) - now) / 60) + "m" : "(finalizable)"}` : st;
+    const pct = t.deposited ? Number(t.paid * 100n / t.deposited) : 0;
+    return `<tr><td>${ids[i]}</td><td><span class="pill ${st}">${label}</span></td><td>${short(t.payer)}</td><td>${short(t.provider)}</td><td>${u(t.paid)} / ${u(t.deposited)} USDC<div class="bar"><i style="width:${pct}%"></i></div></td><td>${dur(Number(t.closeDelay))}</td></tr>`;
+  }).join("") || `<tr><td colspan="6">no tabs yet</td></tr>`;
+
+  const head = await pc.getBlockNumber();
+  let logs = [];
+  for (let from = DEPLOY_BLOCK; from <= head; from += 10000n) {
+    const to = from + 9999n > head ? head : from + 9999n;
+    logs = logs.concat(await pc.getContractEvents({ address: C, abi: lumenTabAbi, fromBlock: from, toBlock: to }));
+  }
+  let settled = 0n;
+  for (const l of logs) if (l.eventName === "Redeemed") settled += BigInt(l.args.amount ?? 0n);
+  $("settled").textContent = u(settled);
+  const det = (l) => {
+    const a = l.args;
+    switch (l.eventName) {
+      case "TabOpened": return `deposit ${u(a.amount)} USDC · provider agent #${a.providerAgentId}`;
+      case "TabToppedUp": return `+${u(a.amount)} USDC`;
+      case "Redeemed": return `${u(a.amount)} USDC to provider (cumulative ${u(a.cumulative)})`;
+      case "CloseRequested": return `close at ${new Date(Number(a.closeAt) * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC`;
+      case "TabClosed": return `provider total ${u(a.paidToProvider)} USDC · refund ${u(a.refundedToPayer)} USDC to payer`;
+      default: return "";
+    }
+  };
+  $("events").tBodies[0].innerHTML = logs.slice().reverse().slice(0, 40).map((l) =>
+    `<tr><td>${l.blockNumber}</td><td>${l.eventName}</td><td>${l.args.tabId}</td><td>${det(l)}</td><td><a class="mono" href="${EXP}/tx/${l.transactionHash}" target="_blank" rel="noopener">${l.transactionHash.slice(0, 10)}…</a></td></tr>`).join("");
+}
+
+$("vex").onclick = () => { $("vin").value = "eyJzIjoibHVtZW4tdGFiLXYxIiwidCI6IjMiLCJjIjoiNjAwMCIsInNpZyI6IjB4ZDQ4Y2E5NzJmZDMyODNkZDA0MjA1MWE5NzJlMzdhYzQ4M2UzNzk1YjdlODViZTJkYTZlOWYxMmUwZGJmNDUxZTIyZmRjMzQxYmE3ZWRlYzY2YzlmZjFhMzYzNjY5N2NhZDZiZjBmZmZmYjhhMDU0MjIyNGYwNjdkYzg2MGM2MWExYyJ9"; $("vbtn").click(); };
+$("vbtn").onclick = async () => {
+  const out = $("vout");
+  try {
+    const b64 = $("vin").value.trim().replace(/-/g, "+").replace(/_/g, "/");
+    const o = JSON.parse(atob(b64 + "===".slice((b64.length + 3) % 4)));
+    if (o.s !== "lumen-tab-v1") throw new Error("unknown scheme");
+    const tabId = BigInt(o.t), cum = BigInt(o.c);
+    const t = await pc.readContract({ address: C, abi: lumenTabAbi, functionName: "getTab", args: [tabId] });
+    const digest = await pc.readContract({ address: C, abi: lumenTabAbi, functionName: "voucherDigest", args: [tabId, cum] });
+    const who = await recoverAddress({ hash: digest, signature: o.sig });
+    const sigOk = who.toLowerCase() === t.signer.toLowerCase();
+    const lines = [
+      `tab #${tabId}: deposited ${u(t.deposited)} USDC, already settled ${u(t.paid)}, ${t.closed ? "CLOSED" : t.closeAt ? "closing" : "open"}`,
+      `voucher cumulative: ${u(cum)} USDC  -> redeemable now: ${cum > t.paid && cum <= t.deposited && !t.closed ? u(cum - t.paid) : "0"} USDC`,
+      `signer recovered: ${who}  ${sigOk ? "✓ matches tab signer" : "✗ tab signer is " + t.signer}`,
+    ];
+    out.className = "res mono " + (sigOk ? "okc" : "badc"); out.textContent = lines.join("\n");
+  } catch (e) { out.className = "res mono badc"; out.textContent = "invalid: " + (e.shortMessage ?? e.message); }
+};
+
+load().catch((e) => { $("tabs").tBodies[0].innerHTML = `<tr><td colspan="6">RPC error: ${e.message}</td></tr>`; });
+setInterval(() => load().catch(() => {}), 15000);
+</script>
+</body>
+</html>
