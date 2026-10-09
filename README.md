@@ -144,3 +144,12 @@ MIT © Lumenworks
 - [x402 Inspector](https://dansgit2b.github.io/x402-inspector/): decode and lint x402 payment headers
 - [EIP-712 Inspector](https://dansgit2b.github.io/eip712-inspector/): see what a typed-data signature authorises
 - [Calldata Decoder](https://dansgit2b.github.io/calldata-decoder/): decode EVM calldata and multicalls without an ABI
+
+## Support this project
+
+This tool is free and MIT-licensed, maintained by one developer. If it saved you time, a tip of any size keeps it maintained:
+
+- **USDC on Base or Arc:** `0xee9790cB3960952F585379F831a89b4e00B4029A`
+- Drips: this repo has a `FUNDING.json`, so it can receive funds and dependency splits through [Drips](https://www.drips.network/).
+
+Thank you!
