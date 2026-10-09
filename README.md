@@ -138,3 +138,9 @@ Next steps:
 ## License
 
 MIT © Lumenworks
+
+
+## More from Lumen Works
+- [x402 Inspector](https://dansgit2b.github.io/x402-inspector/): decode and lint x402 payment headers
+- [EIP-712 Inspector](https://dansgit2b.github.io/eip712-inspector/): see what a typed-data signature authorises
+- [Calldata Decoder](https://dansgit2b.github.io/calldata-decoder/): decode EVM calldata and multicalls without an ABI
